@@ -1,0 +1,19 @@
+[package]
+name = "step_curve"
+version = "0.1.0"
+edition = "2024_07"
+
+[dependencies]
+starknet = "2.8.2"
+
+[lib]
+name = "step_curve"
+path = "src/lib.cairo"
+
+[[target.starknet-contract]]
+sierra = true
+casm = true
+
+[scripts]
+build = "scarb build"
+check = "scarb check"
