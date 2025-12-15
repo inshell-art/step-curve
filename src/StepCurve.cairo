@@ -16,15 +16,15 @@ pub mod StepCurve {
     #[abi(embed_v0)]
     impl StepCurveImpl of IStepCurve<ContractState> {
         /// Convert ordered nodes into SVG path-data ("d").
-        /// `tension` controls handle distance; values <= 0 default to 3 to avoid div-by-zero.
-        fn d_from_nodes(self: @ContractState, nodes: Span<Point>, tension: u32) -> ByteArray {
-            let safe_tension = if tension == 0_u32 { 3_u32 } else { tension };
-            self._to_cubic_bezier(nodes, safe_tension)
+        /// `handle_scale` controls handle distance; values <= 0 default to 1 to avoid div-by-zero.
+        fn d_from_nodes(self: @ContractState, nodes: Span<Point>, handle_scale: u32) -> ByteArray {
+            let safe_handle_scale = if handle_scale == 0_u32 { 1_u32 } else { handle_scale };
+            self._to_cubic_bezier(nodes, safe_handle_scale)
         }
 
         /// Convenience entrypoint: accepts flattened XY felts (as signed i128) and returns path `d`.
         fn d_from_flattened_xy(
-            self: @ContractState, nodes_xy: Span<felt252>, tension: u32,
+            self: @ContractState, nodes_xy: Span<felt252>, handle_scale: u32,
         ) -> ByteArray {
             assert(nodes_xy.len() % 2_usize == 0_usize, 'nodes_xy length must be even');
             let mut points: Array<Point> = array![];
@@ -35,24 +35,26 @@ pub mod StepCurve {
                 points.append(Point { x, y });
                 i = i + 2_usize;
             }
-            self.d_from_nodes(points.span(), tension)
+            self.d_from_nodes(points.span(), handle_scale)
         }
     }
 
     #[starknet::interface]
     pub trait IStepCurve<TContractState> {
         /// Convert ordered nodes into SVG path-data.
-        fn d_from_nodes(self: @TContractState, nodes: Span<Point>, tension: u32) -> ByteArray;
+        fn d_from_nodes(self: @TContractState, nodes: Span<Point>, handle_scale: u32) -> ByteArray;
 
         /// Convenience: same as above but with flattened XY felts.
         fn d_from_flattened_xy(
-            self: @TContractState, nodes_xy: Span<felt252>, tension: u32,
+            self: @TContractState, nodes_xy: Span<felt252>, handle_scale: u32,
         ) -> ByteArray;
     }
 
     #[generate_trait]
     impl InternalImpl of InternalTrait {
-        fn _to_cubic_bezier(self: @ContractState, nodes: Span<Point>, tension: u32) -> ByteArray {
+        fn _to_cubic_bezier(
+            self: @ContractState, nodes: Span<Point>, handle_scale: u32,
+        ) -> ByteArray {
             let len = nodes.len();
             if len < 2_usize {
                 return Default::default();
@@ -87,10 +89,10 @@ pub mod StepCurve {
                 let delta_x2 = p3.x - p1.x;
                 let delta_y2 = p3.y - p1.y;
 
-                let cp1x = p1.x + self._div_round(delta_x1, tension);
-                let cp1y = p1.y + self._div_round(delta_y1, tension);
-                let cp2x = p2.x - self._div_round(delta_x2, tension);
-                let cp2y = p2.y - self._div_round(delta_y2, tension);
+                let cp1x = p1.x + self._div_round(delta_x1, handle_scale);
+                let cp1y = p1.y + self._div_round(delta_y1, handle_scale);
+                let cp2x = p2.x - self._div_round(delta_x2, handle_scale);
+                let cp2y = p2.y - self._div_round(delta_y2, handle_scale);
 
                 d.append(@" C ");
                 d.append(@self._i128_to_string(cp1x));
@@ -112,8 +114,8 @@ pub mod StepCurve {
             d
         }
 
-        fn _div_round(self: @ContractState, value: i128, denominator: u32) -> i128 {
-            let denom: i128 = denominator.into();
+        fn _div_round(self: @ContractState, value: i128, handle_scale: u32) -> i128 {
+            let denom: i128 = handle_scale.into();
             if denom == 0_i128 {
                 return 0_i128;
             }
