@@ -17,3 +17,6 @@ casm = true
 [scripts]
 build = "scarb build"
 check = "scarb check"
+
+[dev-dependencies]
+snforge_std = "0.52.0"

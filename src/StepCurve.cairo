@@ -1,8 +1,16 @@
 #[starknet::contract]
 pub mod StepCurve {
-    use core::array::{ArrayTrait, Span, SpanTrait};
+    use core::array::{Array, ArrayTrait, Span, SpanTrait};
     use core::byte_array::ByteArrayTrait;
+    use core::serde::Serde;
     use core::traits::TryInto;
+    use crate::glyph_interface::IGlyph;
+
+    const META_0: felt252 = 'name=step_curve;kind=svg;';
+    const META_1: felt252 = 'tag=path-d;version=0.1.0;';
+    const META_2: felt252 = 'params=handle_scale,xy_pairs;';
+    const META_3: felt252 = 'returns=svg_path_d;';
+    const META_4: felt252 = 'immutable=true';
 
     #[derive(Copy, Drop, Serde)]
     pub struct Point {
@@ -36,6 +44,38 @@ pub mod StepCurve {
                 i = i + 2_usize;
             }
             self.d_from_nodes(points.span(), handle_scale)
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl GlyphImpl of IGlyph<ContractState> {
+        fn render(self: @ContractState, params: Span<felt252>) -> Array<felt252> {
+            let len = params.len();
+            assert(len >= 5_usize, 'params too short');
+            assert((len - 1_usize) % 2_usize == 0_usize, 'params must be xy pairs');
+
+            let handle_scale: u32 = (*params.at(0_usize)).try_into().unwrap();
+            let mut nodes_xy: Array<felt252> = array![];
+            let mut i: usize = 1_usize;
+            while i < len {
+                nodes_xy.append(*params.at(i));
+                i = i + 1_usize;
+            }
+
+            let d = self.d_from_flattened_xy(nodes_xy.span(), handle_scale);
+            let mut out: Array<felt252> = array![];
+            d.serialize(ref out);
+            out
+        }
+
+        fn metadata(self: @ContractState) -> Span<felt252> {
+            let mut data: Array<felt252> = array![];
+            data.append(META_0);
+            data.append(META_1);
+            data.append(META_2);
+            data.append(META_3);
+            data.append(META_4);
+            data.span()
         }
     }
 
