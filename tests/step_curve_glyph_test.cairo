@@ -4,7 +4,6 @@ use core::serde::Serde;
 use snforge_std::{declare, ContractClassTrait, DeclareResultTrait};
 use starknet::ContractAddress;
 use step_curve::glyph_interface::{IGlyphDispatcher, IGlyphDispatcherTrait};
-use step_curve::StepCurve::StepCurve::{IStepCurveDispatcher, IStepCurveDispatcherTrait};
 
 fn deploy_step_curve() -> ContractAddress {
     let class = declare("StepCurve").unwrap().contract_class();
@@ -39,35 +38,18 @@ fn assert_span_eq(actual: Span<felt252>, expected: @Array<felt252>) {
 }
 
 #[test]
-fn d_from_flattened_xy_returns_expected() {
+fn render_returns_expected() {
     let contract = deploy_step_curve();
-    let dispatcher = IStepCurveDispatcher { contract_address: contract };
-
-    let mut nodes: Array<felt252> = array![0, 0, 100, 100];
-    let d = dispatcher.d_from_flattened_xy(nodes.span(), 10_u32);
-
-    let mut expected: ByteArray = Default::default();
-    expected.append(@"M 0 0\n C 10 10, 90 90, 100 100\n");
-
-    let d_ser = serialize_bytearray(d);
-    let expected_ser = serialize_bytearray(expected);
-    assert_felt_array_eq(@d_ser, @expected_ser);
-}
-
-#[test]
-fn render_matches_d_from_flattened_xy() {
-    let contract = deploy_step_curve();
-    let dispatcher = IStepCurveDispatcher { contract_address: contract };
     let glyph = IGlyphDispatcher { contract_address: contract };
 
     let mut params: Array<felt252> = array![10, 0, 0, 100, 100];
     let rendered = glyph.render(params.span());
 
-    let mut nodes: Array<felt252> = array![0, 0, 100, 100];
-    let d = dispatcher.d_from_flattened_xy(nodes.span(), 10_u32);
-    let expected = serialize_bytearray(d);
+    let mut expected: ByteArray = Default::default();
+    expected.append(@"M 0 0\n C 10 10, 90 90, 100 100\n");
+    let expected_ser = serialize_bytearray(expected);
 
-    assert_felt_array_eq(@rendered, @expected);
+    assert_felt_array_eq(@rendered, @expected_ser);
 }
 
 #[test]

@@ -2,23 +2,7 @@
 
 Minimal Starknet contract that converts ordered nodes into SVG path-data (`d` string).
 
-The contract supports two usage modes:
-
-## Mode A: contract-native (on-chain composition)
-- `d_from_nodes(nodes: Span<Point>, handle_scale: u32) -> ByteArray`
-- `d_from_flattened_xy(nodes_xy: Span<felt252>, handle_scale: u32) -> ByteArray`
-- `Point` uses signed `i128` coordinates to support negative offsets.
-
-Example (flattened XY pairs):
-
-```bash
-sncast call \
-  --contract-address 0x... \
-  --function d_from_flattened_xy \
-  --calldata 4 0 0 100 100 10
-```
-
-## Mode B: GLYPH interface (generic)
+The contract exposes the GLYPH interface:
 - `render(params: Span<felt252>) -> Array<felt252>`
 - `metadata() -> Span<felt252>`
 

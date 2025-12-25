@@ -22,32 +22,6 @@ pub mod StepCurve {
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl StepCurveImpl of IStepCurve<ContractState> {
-        /// Convert ordered nodes into SVG path-data ("d").
-        /// `handle_scale` controls handle distance; values <= 0 default to 1 to avoid div-by-zero.
-        fn d_from_nodes(self: @ContractState, nodes: Span<Point>, handle_scale: u32) -> ByteArray {
-            let safe_handle_scale = if handle_scale == 0_u32 { 1_u32 } else { handle_scale };
-            self._to_cubic_bezier(nodes, safe_handle_scale)
-        }
-
-        /// Convenience entrypoint: accepts flattened XY felts (as signed i128) and returns path `d`.
-        fn d_from_flattened_xy(
-            self: @ContractState, nodes_xy: Span<felt252>, handle_scale: u32,
-        ) -> ByteArray {
-            assert(nodes_xy.len() % 2_usize == 0_usize, 'nodes_xy length must be even');
-            let mut points: Array<Point> = array![];
-            let mut i: usize = 0_usize;
-            while i + 1_usize < nodes_xy.len() {
-                let x: i128 = (*nodes_xy.at(i)).try_into().unwrap();
-                let y: i128 = (*nodes_xy.at(i + 1_usize)).try_into().unwrap();
-                points.append(Point { x, y });
-                i = i + 2_usize;
-            }
-            self.d_from_nodes(points.span(), handle_scale)
-        }
-    }
-
-    #[abi(embed_v0)]
     impl GlyphImpl of IGlyph<ContractState> {
         fn render(self: @ContractState, params: Span<felt252>) -> Array<felt252> {
             let len = params.len();
@@ -62,7 +36,7 @@ pub mod StepCurve {
                 i = i + 1_usize;
             }
 
-            let d = self.d_from_flattened_xy(nodes_xy.span(), handle_scale);
+            let d = self._d_from_flattened_xy(nodes_xy.span(), handle_scale);
             let mut out: Array<felt252> = array![];
             d.serialize(ref out);
             out
@@ -79,19 +53,33 @@ pub mod StepCurve {
         }
     }
 
-    #[starknet::interface]
-    pub trait IStepCurve<TContractState> {
-        /// Convert ordered nodes into SVG path-data.
-        fn d_from_nodes(self: @TContractState, nodes: Span<Point>, handle_scale: u32) -> ByteArray;
-
-        /// Convenience: same as above but with flattened XY felts.
-        fn d_from_flattened_xy(
-            self: @TContractState, nodes_xy: Span<felt252>, handle_scale: u32,
-        ) -> ByteArray;
-    }
-
     #[generate_trait]
     impl InternalImpl of InternalTrait {
+        /// Convert ordered nodes into SVG path-data ("d").
+        /// `handle_scale` controls handle distance; values <= 0 default to 1 to avoid div-by-zero.
+        fn _d_from_nodes(
+            self: @ContractState, nodes: Span<Point>, handle_scale: u32,
+        ) -> ByteArray {
+            let safe_handle_scale = if handle_scale == 0_u32 { 1_u32 } else { handle_scale };
+            self._to_cubic_bezier(nodes, safe_handle_scale)
+        }
+
+        /// Convenience: accepts flattened XY felts (as signed i128) and returns path `d`.
+        fn _d_from_flattened_xy(
+            self: @ContractState, nodes_xy: Span<felt252>, handle_scale: u32,
+        ) -> ByteArray {
+            assert(nodes_xy.len() % 2_usize == 0_usize, 'nodes_xy length must be even');
+            let mut points: Array<Point> = array![];
+            let mut i: usize = 0_usize;
+            while i + 1_usize < nodes_xy.len() {
+                let x: i128 = (*nodes_xy.at(i)).try_into().unwrap();
+                let y: i128 = (*nodes_xy.at(i + 1_usize)).try_into().unwrap();
+                points.append(Point { x, y });
+                i = i + 2_usize;
+            }
+            self._d_from_nodes(points.span(), handle_scale)
+        }
+
         fn _to_cubic_bezier(
             self: @ContractState, nodes: Span<Point>, handle_scale: u32,
         ) -> ByteArray {
