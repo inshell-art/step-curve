@@ -68,3 +68,47 @@ fn metadata_returns_expected_chunks() {
 
     assert_span_eq(meta, @expected);
 }
+
+#[test]
+fn render_defaults_handle_scale_zero() {
+    let contract = deploy_step_curve();
+    let glyph = IGlyphDispatcher { contract_address: contract };
+
+    let params_zero: Array<felt252> = array![0, 0, 0, 10, 10];
+    let params_one: Array<felt252> = array![1, 0, 0, 10, 10];
+
+    let rendered_zero = glyph.render(params_zero.span());
+    let rendered_one = glyph.render(params_one.span());
+
+    assert_felt_array_eq(@rendered_zero, @rendered_one);
+}
+
+#[test]
+fn render_handles_negative_coords() {
+    let contract = deploy_step_curve();
+    let glyph = IGlyphDispatcher { contract_address: contract };
+
+    let params: Array<felt252> = array![5, -10, -20, 10, 20];
+    let rendered = glyph.render(params.span());
+
+    let mut expected: ByteArray = Default::default();
+    expected.append(@"M -10 -20\n C -6 -12, 6 12, 10 20\n");
+    let expected_ser = serialize_bytearray(expected);
+
+    assert_felt_array_eq(@rendered, @expected_ser);
+}
+
+#[test]
+fn render_multi_segment_path() {
+    let contract = deploy_step_curve();
+    let glyph = IGlyphDispatcher { contract_address: contract };
+
+    let params: Array<felt252> = array![10, 0, 0, 100, 0, 100, 100];
+    let rendered = glyph.render(params.span());
+
+    let mut expected: ByteArray = Default::default();
+    expected.append(@"M 0 0\n C 10 0, 90 -10, 100 0\n C 110 10, 100 90, 100 100\n");
+    let expected_ser = serialize_bytearray(expected);
+
+    assert_felt_array_eq(@rendered, @expected_ser);
+}

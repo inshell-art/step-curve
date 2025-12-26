@@ -27,7 +27,7 @@ Example (Sepolia):
 
 ```bash
 sncast --network sepolia call \
-  --address 0x503bf054e089ea19c7df43091a57cd106cfc2672fea9b1a9633c3dbb7ac335 \
+  --contract-address 0x503bf054e089ea19c7df43091a57cd106cfc2672fea9b1a9633c3dbb7ac335 \
   --function render \
   --calldata 5 0 0 100 100
 ```
